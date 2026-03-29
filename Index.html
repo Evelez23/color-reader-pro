@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Color Reader Pro - Intérprete de Techpacks</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #1a2634;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 20px;
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 1.8rem;
+            color: #1e466e;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        .upload-area {
+            background-color: #f8f9fa;
+            border: 2px dashed #ced4da;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #1e466e;
+            background-color: #e9ecef;
+        }
+        .upload-label {
+            display: inline-block;
+            background-color: #1e466e;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .upload-label:hover {
+            background-color: #0f2b44;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .info-text {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        button.export-csv {
+            background-color: #17a2b8;
+        }
+        button.export-csv:hover {
+            background-color: #138496;
+        }
+        button.copy-json {
+            background-color: #ffc107;
+            color: #1a2634;
+        }
+        button.copy-json:hover {
+            background-color: #e0a800;
+        }
+        .results-table {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        .color-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            display: inline-block;
+        }
+        .edit-name {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .hex-code {
+            font-family: monospace;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            padding: 4px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .tone-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        .tone-claro {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .tone-oscuro {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #e2e3e5;
+            color: #383d41;
+            font-size: 0.9rem;
+        }
+        canvas {
+            display: none;
+        }
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            th, td { padding: 8px; }
+            .edit-name { font-size: 0.8rem; }
+        }
+    </style>
+    <!-- Cargar librerías externas -->
+    <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
+    <script src="https://unpkg.com/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Color Reader Pro</h1>
+        <div class="upload-area" id="uploadArea">
+            <label for="imageInput" class="upload-label">📸 Cargar imagen del techpack</label>
+            <input type="file" id="imageInput" accept="image/jpeg, image/png, image/webp">
+            <div class="info-text">Sube una imagen clara de los chips de color. El sistema detectará los rectángulos automáticamente.</div>
+        </div>
+        
+        <div class="controls" id="controls" style="display: none;">
+            <button id="exportJsonBtn">📋 Exportar JSON</button>
+            <button id="exportCsvBtn" class="export-csv">📊 Exportar CSV</button>
+            <button id="copyJsonBtn" class="copy-json">📑 Copiar JSON</button>
+        </div>
+        
+        <div id="status" class="status">⚙️ Esperando imagen...</div>
+        
+        <div class="results-table" id="resultsContainer" style="display: none;">
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>Color</th>
+                        <th>Nombre (editable)</th>
+                        <th>HEX</th>
+                        <th>Tono</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <!-- Las filas se generarán dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+        <footer>🧠 Detección automática de rectángulos + OCR | Edita los nombres si es necesario</footer>
+    </div>
+    <canvas id="canvas" width="0" height="0"></canvas>
+
+    <!-- Módulos de la aplicación -->
+    <script src="js/color.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
